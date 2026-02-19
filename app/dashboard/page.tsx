@@ -1,151 +1,94 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-type RSVPStatus = 'YES' | 'NO' | 'PENDING';
-type Filter = 'ALL' | RSVPStatus;
+type RSVPStatus = 'yes' | 'no' | 'pending';
+type Filter = 'all' | RSVPStatus;
 
-interface Attendee {
+interface Guest {
   id: number;
+  event_id: number;
   name: string;
-  email: string;
-  rsvp: RSVPStatus;
+  rsvp_status: RSVPStatus;
+  responded_at: string | null;
+  created_at: string;
 }
 
-const ATTENDEES: Attendee[] = [
-  { id: 1,   name: 'Emma Smith',         email: 'emma.smith@gmail.com',         rsvp: 'YES' },
-  { id: 2,   name: 'James Johnson',      email: 'james.johnson@yahoo.com',      rsvp: 'NO' },
-  { id: 3,   name: 'Olivia Williams',    email: 'olivia.williams@outlook.com',  rsvp: 'PENDING' },
-  { id: 4,   name: 'Liam Brown',         email: 'liam.brown@gmail.com',         rsvp: 'YES' },
-  { id: 5,   name: 'Ava Jones',          email: 'ava.jones@hotmail.com',        rsvp: 'NO' },
-  { id: 6,   name: 'Noah Garcia',        email: 'noah.garcia@gmail.com',        rsvp: 'PENDING' },
-  { id: 7,   name: 'Sophia Miller',      email: 'sophia.miller@yahoo.com',      rsvp: 'YES' },
-  { id: 8,   name: 'William Davis',      email: 'william.davis@gmail.com',      rsvp: 'YES' },
-  { id: 9,   name: 'Isabella Rodriguez', email: 'isabella.r@outlook.com',       rsvp: 'PENDING' },
-  { id: 10,  name: 'Benjamin Martinez',  email: 'ben.martinez@gmail.com',       rsvp: 'NO' },
-  { id: 11,  name: 'Mia Hernandez',      email: 'mia.hernandez@yahoo.com',      rsvp: 'YES' },
-  { id: 12,  name: 'Elijah Lopez',       email: 'elijah.lopez@gmail.com',       rsvp: 'YES' },
-  { id: 13,  name: 'Charlotte Gonzalez', email: 'charlotte.g@hotmail.com',      rsvp: 'PENDING' },
-  { id: 14,  name: 'Oliver Wilson',      email: 'oliver.wilson@outlook.com',    rsvp: 'NO' },
-  { id: 15,  name: 'Amelia Anderson',    email: 'amelia.anderson@gmail.com',    rsvp: 'YES' },
-  { id: 16,  name: 'Lucas Thomas',       email: 'lucas.thomas@yahoo.com',       rsvp: 'NO' },
-  { id: 17,  name: 'Harper Taylor',      email: 'harper.taylor@gmail.com',      rsvp: 'PENDING' },
-  { id: 18,  name: 'Mason Moore',        email: 'mason.moore@outlook.com',      rsvp: 'YES' },
-  { id: 19,  name: 'Evelyn Jackson',     email: 'evelyn.jackson@gmail.com',     rsvp: 'YES' },
-  { id: 20,  name: 'Ethan Martin',       email: 'ethan.martin@hotmail.com',     rsvp: 'NO' },
-  { id: 21,  name: 'Abigail Lee',        email: 'abigail.lee@gmail.com',        rsvp: 'PENDING' },
-  { id: 22,  name: 'Daniel Perez',       email: 'daniel.perez@yahoo.com',       rsvp: 'YES' },
-  { id: 23,  name: 'Emily Thompson',     email: 'emily.thompson@gmail.com',     rsvp: 'YES' },
-  { id: 24,  name: 'Jacob White',        email: 'jacob.white@outlook.com',      rsvp: 'NO' },
-  { id: 25,  name: 'Ella Harris',        email: 'ella.harris@gmail.com',        rsvp: 'PENDING' },
-  { id: 26,  name: 'Logan Sanchez',      email: 'logan.sanchez@hotmail.com',    rsvp: 'YES' },
-  { id: 27,  name: 'Elizabeth Clark',    email: 'elizabeth.clark@gmail.com',    rsvp: 'NO' },
-  { id: 28,  name: 'Jackson Ramirez',    email: 'jackson.r@yahoo.com',          rsvp: 'YES' },
-  { id: 29,  name: 'Camila Lewis',       email: 'camila.lewis@gmail.com',       rsvp: 'PENDING' },
-  { id: 30,  name: 'Sebastian Robinson', email: 'seb.robinson@outlook.com',     rsvp: 'YES' },
-  { id: 31,  name: 'Luna Walker',        email: 'luna.walker@gmail.com',        rsvp: 'NO' },
-  { id: 32,  name: 'Jack Young',         email: 'jack.young@yahoo.com',         rsvp: 'YES' },
-  { id: 33,  name: 'Sofia Allen',        email: 'sofia.allen@gmail.com',        rsvp: 'PENDING' },
-  { id: 34,  name: 'Aiden King',         email: 'aiden.king@hotmail.com',       rsvp: 'YES' },
-  { id: 35,  name: 'Victoria Wright',    email: 'victoria.wright@gmail.com',    rsvp: 'NO' },
-  { id: 36,  name: 'Owen Scott',         email: 'owen.scott@outlook.com',       rsvp: 'PENDING' },
-  { id: 37,  name: 'Madison Torres',     email: 'madison.torres@gmail.com',     rsvp: 'YES' },
-  { id: 38,  name: 'Samuel Nguyen',      email: 'samuel.nguyen@yahoo.com',      rsvp: 'YES' },
-  { id: 39,  name: 'Riley Hill',         email: 'riley.hill@gmail.com',         rsvp: 'NO' },
-  { id: 40,  name: 'Ryan Flores',        email: 'ryan.flores@hotmail.com',      rsvp: 'PENDING' },
-  { id: 41,  name: 'Zoey Green',         email: 'zoey.green@gmail.com',         rsvp: 'YES' },
-  { id: 42,  name: 'Nathan Adams',       email: 'nathan.adams@yahoo.com',       rsvp: 'NO' },
-  { id: 43,  name: 'Nora Nelson',        email: 'nora.nelson@gmail.com',        rsvp: 'YES' },
-  { id: 44,  name: 'Caleb Baker',        email: 'caleb.baker@outlook.com',      rsvp: 'PENDING' },
-  { id: 45,  name: 'Lily Hall',          email: 'lily.hall@gmail.com',          rsvp: 'YES' },
-  { id: 46,  name: 'Zachary Rivera',     email: 'zach.rivera@hotmail.com',      rsvp: 'NO' },
-  { id: 47,  name: 'Eleanor Campbell',   email: 'eleanor.c@gmail.com',          rsvp: 'PENDING' },
-  { id: 48,  name: 'Dylan Mitchell',     email: 'dylan.mitchell@yahoo.com',     rsvp: 'YES' },
-  { id: 49,  name: 'Hannah Carter',      email: 'hannah.carter@gmail.com',      rsvp: 'YES' },
-  { id: 50,  name: 'Tyler Roberts',      email: 'tyler.roberts@outlook.com',    rsvp: 'NO' },
-  { id: 51,  name: 'Lillian Smith',      email: 'lillian.smith@gmail.com',      rsvp: 'PENDING' },
-  { id: 52,  name: 'Brandon Johnson',    email: 'brandon.j@hotmail.com',        rsvp: 'YES' },
-  { id: 53,  name: 'Addison Williams',   email: 'addison.w@gmail.com',          rsvp: 'NO' },
-  { id: 54,  name: 'Austin Brown',       email: 'austin.brown@yahoo.com',       rsvp: 'YES' },
-  { id: 55,  name: 'Aubrey Jones',       email: 'aubrey.jones@gmail.com',       rsvp: 'PENDING' },
-  { id: 56,  name: 'Evan Garcia',        email: 'evan.garcia@outlook.com',      rsvp: 'YES' },
-  { id: 57,  name: 'Ellie Miller',       email: 'ellie.miller@gmail.com',       rsvp: 'NO' },
-  { id: 58,  name: 'Adrian Davis',       email: 'adrian.davis@hotmail.com',     rsvp: 'PENDING' },
-  { id: 59,  name: 'Stella Rodriguez',   email: 'stella.r@gmail.com',           rsvp: 'YES' },
-  { id: 60,  name: 'Ian Martinez',       email: 'ian.martinez@yahoo.com',       rsvp: 'YES' },
-  { id: 61,  name: 'Natalie Hernandez',  email: 'natalie.h@gmail.com',          rsvp: 'NO' },
-  { id: 62,  name: 'Marcus Lopez',       email: 'marcus.lopez@outlook.com',     rsvp: 'PENDING' },
-  { id: 63,  name: 'Zoe Gonzalez',       email: 'zoe.gonzalez@gmail.com',       rsvp: 'YES' },
-  { id: 64,  name: 'Victor Wilson',      email: 'victor.wilson@hotmail.com',    rsvp: 'NO' },
-  { id: 65,  name: 'Leah Anderson',      email: 'leah.anderson@gmail.com',      rsvp: 'YES' },
-  { id: 66,  name: 'Kevin Thomas',       email: 'kevin.thomas@yahoo.com',       rsvp: 'PENDING' },
-  { id: 67,  name: 'Hazel Taylor',       email: 'hazel.taylor@gmail.com',       rsvp: 'YES' },
-  { id: 68,  name: 'Patrick Moore',      email: 'patrick.moore@outlook.com',    rsvp: 'NO' },
-  { id: 69,  name: 'Violet Jackson',     email: 'violet.jackson@gmail.com',     rsvp: 'PENDING' },
-  { id: 70,  name: 'Eric Martin',        email: 'eric.martin@hotmail.com',      rsvp: 'YES' },
-  { id: 71,  name: 'Aurora Lee',         email: 'aurora.lee@gmail.com',         rsvp: 'YES' },
-  { id: 72,  name: 'Justin Perez',       email: 'justin.perez@yahoo.com',       rsvp: 'NO' },
-  { id: 73,  name: 'Savannah Thompson',  email: 'savannah.t@gmail.com',         rsvp: 'PENDING' },
-  { id: 74,  name: 'Kyle White',         email: 'kyle.white@outlook.com',       rsvp: 'YES' },
-  { id: 75,  name: 'Audrey Harris',      email: 'audrey.harris@gmail.com',      rsvp: 'NO' },
-  { id: 76,  name: 'Scott Sanchez',      email: 'scott.sanchez@hotmail.com',    rsvp: 'YES' },
-  { id: 77,  name: 'Brooklyn Clark',     email: 'brooklyn.clark@gmail.com',     rsvp: 'PENDING' },
-  { id: 78,  name: 'Andre Ramirez',      email: 'andre.ramirez@yahoo.com',      rsvp: 'YES' },
-  { id: 79,  name: 'Bella Lewis',        email: 'bella.lewis@gmail.com',        rsvp: 'YES' },
-  { id: 80,  name: 'Carlos Robinson',    email: 'carlos.robinson@outlook.com',  rsvp: 'NO' },
-  { id: 81,  name: 'Claire Walker',      email: 'claire.walker@gmail.com',      rsvp: 'PENDING' },
-  { id: 82,  name: 'Miguel Young',       email: 'miguel.young@hotmail.com',     rsvp: 'YES' },
-  { id: 83,  name: 'Skyler Allen',       email: 'skyler.allen@gmail.com',       rsvp: 'NO' },
-  { id: 84,  name: 'Diego King',         email: 'diego.king@yahoo.com',         rsvp: 'YES' },
-  { id: 85,  name: 'Lucy Wright',        email: 'lucy.wright@gmail.com',        rsvp: 'PENDING' },
-  { id: 86,  name: 'Luis Scott',         email: 'luis.scott@outlook.com',       rsvp: 'YES' },
-  { id: 87,  name: 'Paisley Torres',     email: 'paisley.torres@gmail.com',     rsvp: 'NO' },
-  { id: 88,  name: 'Juan Nguyen',        email: 'juan.nguyen@hotmail.com',      rsvp: 'YES' },
-  { id: 89,  name: 'Gabriel Hill',       email: 'gabriel.hill@gmail.com',       rsvp: 'PENDING' },
-  { id: 90,  name: 'Roberto Flores',     email: 'roberto.flores@yahoo.com',     rsvp: 'YES' },
-  { id: 91,  name: 'Rafael Green',       email: 'rafael.green@gmail.com',       rsvp: 'NO' },
-  { id: 92,  name: 'Mateo Adams',        email: 'mateo.adams@outlook.com',      rsvp: 'YES' },
-  { id: 93,  name: 'Grace Nelson',       email: 'grace.nelson@gmail.com',       rsvp: 'PENDING' },
-  { id: 94,  name: 'Chloe Baker',        email: 'chloe.baker@hotmail.com',      rsvp: 'YES' },
-  { id: 95,  name: 'Penelope Hall',      email: 'penelope.hall@gmail.com',      rsvp: 'NO' },
-  { id: 96,  name: 'Layla Rivera',       email: 'layla.rivera@yahoo.com',       rsvp: 'YES' },
-  { id: 97,  name: 'Camille Campbell',   email: 'camille.campbell@gmail.com',   rsvp: 'PENDING' },
-  { id: 98,  name: 'Sofia Mitchell',     email: 'sofia.mitchell@outlook.com',   rsvp: 'YES' },
-  { id: 99,  name: 'Anna Carter',        email: 'anna.carter@gmail.com',        rsvp: 'NO' },
-  { id: 100, name: 'Marcus Roberts',     email: 'marcus.roberts@hotmail.com',   rsvp: 'YES' },
-];
+interface EventData {
+  id: number;
+  title: string;
+  event_date: string;
+  rsvp_deadline: string;
+  guests: Guest[];
+}
 
 const PAGE_SIZE = 20;
 
 const serif = { fontFamily: 'var(--font-cormorant), serif' };
 
 const FILTER_TABS: { label: string; value: Filter }[] = [
-  { label: 'All',       value: 'ALL' },
-  { label: 'Going',     value: 'YES' },
-  { label: 'Not Going', value: 'NO' },
-  { label: 'Pending',   value: 'PENDING' },
+  { label: 'All',       value: 'all' },
+  { label: 'Going',     value: 'yes' },
+  { label: 'Not Going', value: 'no' },
+  { label: 'Pending',   value: 'pending' },
 ];
 
 const rsvpBadge: Record<RSVPStatus, { label: string; className: string }> = {
-  YES:     { label: 'Going',     className: 'bg-[#e8f5e9] text-[#2e7d32] border border-[#a5d6a7]' },
-  NO:      { label: 'Not Going', className: 'bg-[#fdf2f2] text-[#b91c1c] border border-[#fca5a5]' },
-  PENDING: { label: 'Pending',   className: 'bg-[#fffbeb] text-[#92400e] border border-[#fcd34d]' },
+  yes:     { label: 'Going',     className: 'bg-[#e8f5e9] text-[#2e7d32] border border-[#a5d6a7]' },
+  no:      { label: 'Not Going', className: 'bg-[#fdf2f2] text-[#b91c1c] border border-[#fca5a5]' },
+  pending: { label: 'Pending',   className: 'bg-[#fffbeb] text-[#92400e] border border-[#fcd34d]' },
 };
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [filter, setFilter] = useState<Filter>('ALL');
+  const [event, setEvent] = useState<EventData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<Filter>('all');
   const [page, setPage] = useState(1);
 
-  const counts = {
-    YES:     ATTENDEES.filter(a => a.rsvp === 'YES').length,
-    NO:      ATTENDEES.filter(a => a.rsvp === 'NO').length,
-    PENDING: ATTENDEES.filter(a => a.rsvp === 'PENDING').length,
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const res = await fetch('/api/events');
+
+        if (res.status === 401) {
+          router.push('/');
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch');
+        }
+
+        const data: EventData = await res.json();
+        setEvent(data);
+      } catch {
+        // Network error or unexpected — send back to login
+        router.push('/');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
+  }, [router]);
+
+  const handleSignOut = async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    router.push('/');
   };
 
-  const filtered = filter === 'ALL' ? ATTENDEES : ATTENDEES.filter(a => a.rsvp === filter);
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const guests = event?.guests ?? [];
+
+  const counts = {
+    yes:     guests.filter(g => g.rsvp_status === 'yes').length,
+    no:      guests.filter(g => g.rsvp_status === 'no').length,
+    pending: guests.filter(g => g.rsvp_status === 'pending').length,
+  };
+
+  const filtered = filter === 'all' ? guests : guests.filter(g => g.rsvp_status === filter);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleFilterChange = (value: Filter) => {
@@ -154,8 +97,23 @@ export default function DashboardPage() {
   };
 
   const tabCount = (value: Filter) =>
-    value === 'ALL' ? ATTENDEES.length : counts[value];
+    value === 'all' ? guests.length : counts[value];
 
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#F5E6E0] flex items-center justify-center">
+        <p
+          className="text-sm tracking-[0.2em] uppercase text-[#8B7468]"
+          style={serif}
+        >
+          Loading...
+        </p>
+      </div>
+    );
+  }
+
+  // ── Main ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#F5E6E0]">
 
@@ -169,7 +127,7 @@ export default function DashboardPage() {
             Events Dashboard
           </span>
           <button
-            onClick={() => router.push('/')}
+            onClick={handleSignOut}
             className="text-xs tracking-[0.2em] uppercase text-[#8B7468] hover:text-[#6B4F43] transition-colors"
             style={serif}
           >
@@ -192,7 +150,7 @@ export default function DashboardPage() {
             className="text-5xl text-[#6B4F43] italic mb-4"
             style={serif}
           >
-            Summer Gala 2026
+            {event?.title}
           </h1>
           <div className="w-16 h-px bg-[#C4A88A]" />
         </div>
@@ -200,9 +158,9 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
-            { label: 'Going',     count: counts.YES,     color: 'text-[#2e7d32]' },
-            { label: 'Not Going', count: counts.NO,      color: 'text-[#b91c1c]' },
-            { label: 'Pending',   count: counts.PENDING, color: 'text-[#92400e]' },
+            { label: 'Going',     count: counts.yes,     color: 'text-[#2e7d32]' },
+            { label: 'Not Going', count: counts.no,      color: 'text-[#b91c1c]' },
+            { label: 'Pending',   count: counts.pending, color: 'text-[#92400e]' },
           ].map(({ label, count, color }) => (
             <div
               key={label}
@@ -268,41 +226,47 @@ export default function DashboardPage() {
           </div>
 
           {/* Rows */}
-          <div className="divide-y divide-[#C4A88A]/15">
-            {paginated.map((attendee, idx) => {
-              const badge = rsvpBadge[attendee.rsvp];
-              return (
-                <div
-                  key={attendee.id}
-                  className="flex items-center px-6 py-4 hover:bg-[#FAF5F0]/60 transition-colors"
-                >
-                  <span
-                    className="w-10 text-sm text-[#C4A88A]"
-                    style={serif}
+          {paginated.length === 0 ? (
+            <div className="py-16 text-center">
+              <p
+                className="text-sm tracking-[0.2em] uppercase text-[#8B7468]/60"
+                style={serif}
+              >
+                No guests found
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#C4A88A]/15">
+              {paginated.map((guest, idx) => {
+                const badge = rsvpBadge[guest.rsvp_status];
+                return (
+                  <div
+                    key={guest.id}
+                    className="flex items-center px-6 py-4 hover:bg-[#FAF5F0]/60 transition-colors"
                   >
-                    {(page - 1) * PAGE_SIZE + idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-base text-[#3A3A3A]"
+                    <span
+                      className="w-10 text-sm text-[#C4A88A]"
                       style={serif}
                     >
-                      {attendee.name}
+                      {(page - 1) * PAGE_SIZE + idx + 1}
+                    </span>
+                    <p
+                      className="flex-1 text-base text-[#3A3A3A]"
+                      style={serif}
+                    >
+                      {guest.name}
                     </p>
-                    <p className="text-xs text-[#8B7468] mt-0.5 font-sans">
-                      {attendee.email}
-                    </p>
+                    <span
+                      className={`text-xs tracking-[0.1em] uppercase px-3 py-1 ${badge.className}`}
+                      style={serif}
+                    >
+                      {badge.label}
+                    </span>
                   </div>
-                  <span
-                    className={`text-xs tracking-[0.1em] uppercase px-3 py-1 ${badge.className}`}
-                    style={serif}
-                  >
-                    {badge.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-[#C4A88A]/20">

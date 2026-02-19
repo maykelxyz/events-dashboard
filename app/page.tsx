@@ -9,10 +9,33 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.SyntheticEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    router.push('/dashboard');
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || 'Invalid email or password');
+        return;
+      }
+
+      router.push('/dashboard');
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -74,12 +97,22 @@ export default function LoginPage() {
               />
             </div>
 
+            {error && (
+              <p
+                className="text-xs tracking-[0.1em] text-red-500 text-center -mt-2"
+                style={serif}
+              >
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="mt-2 w-full bg-[#6B4F43] text-white text-xs tracking-[0.25em] uppercase py-4 hover:bg-[#5A3F33] transition-all duration-300"
+              disabled={loading}
+              className="mt-2 w-full bg-[#6B4F43] text-white text-xs tracking-[0.25em] uppercase py-4 hover:bg-[#5A3F33] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               style={serif}
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
         </div>
