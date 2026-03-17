@@ -127,12 +127,12 @@ export default function DashboardPage() {
       {/* Top nav */}
       <header className="bg-white/80 border-b border-[#C4A88A]/30 sticky top-0 z-10 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <span className="text-sm sm:text-base tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>
+          <span className="text-sm sm:text-base tracking-[0.2em] uppercase text-[#4A2E24]" style={serif}>
             Events Dashboard
           </span>
           <button
             onClick={handleSignOut}
-            className="text-xs tracking-[0.2em] uppercase text-[#8B7468] hover:text-[#6B4F43] transition-colors"
+            className="text-xs tracking-[0.2em] uppercase text-[#6B4F43] hover:text-[#4A2E24] transition-colors"
             style={serif}
           >
             Sign out
@@ -144,10 +144,10 @@ export default function DashboardPage() {
 
         {/* Event heading */}
         <div className="mb-8 sm:mb-10">
-          <p className="text-xs tracking-[0.3em] uppercase text-[#8B7468] mb-2" style={serif}>
+          <p className="text-xs tracking-[0.3em] uppercase text-[#6B4F43] mb-2" style={serif}>
             Event
           </p>
-          <h1 className="text-4xl sm:text-5xl text-[#6B4F43] italic mb-4" style={serif}>
+          <h1 className="text-4xl sm:text-5xl text-[#4A2E24] italic mb-4" style={serif}>
             {event?.title}
           </h1>
           <div className="w-16 h-px bg-[#C4A88A]" />
@@ -161,7 +161,7 @@ export default function DashboardPage() {
             { label: 'Pending',   count: counts.pending, color: 'text-[#92400e]' },
           ].map(({ label, count, color }) => (
             <div key={label} className="bg-white/70 border border-[#C4A88A]/30 p-4 sm:p-6">
-              <p className="text-[11px] sm:text-xs tracking-[0.2em] uppercase text-[#8B7468] mb-2 sm:mb-3" style={serif}>
+              <p className="text-[11px] sm:text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2 sm:mb-3" style={serif}>
                 {label}
               </p>
               <p className={`text-3xl sm:text-4xl font-light ${color}`} style={serif}>
@@ -183,7 +183,7 @@ export default function DashboardPage() {
                 className={`px-3 sm:px-4 py-2 text-xs tracking-[0.15em] uppercase transition-all duration-200 ${
                   filter === value
                     ? 'bg-[#6B4F43] text-white'
-                    : 'text-[#8B7468] hover:text-[#6B4F43]'
+                    : 'text-[#6B4F43] hover:text-[#4A2E24]'
                 }`}
                 style={serif}
               >
@@ -209,9 +209,9 @@ export default function DashboardPage() {
 
           {/* Column headers — grid so columns never truncate */}
           <div className="grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2.5rem_1fr_auto] items-center px-4 sm:px-6 py-3 border-b border-[#C4A88A]/20 bg-[#FAF5F0]/60">
-            <span className="text-xs tracking-[0.2em] uppercase text-[#8B7468]" style={serif}>#</span>
-            <span className="text-xs tracking-[0.2em] uppercase text-[#8B7468]" style={serif}>Name</span>
-            <span className="text-xs tracking-[0.2em] uppercase text-[#8B7468]" style={serif}>RSVP</span>
+            <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>#</span>
+            <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>Name</span>
+            <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>RSVP</span>
           </div>
 
           {/* Rows */}
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                     <span className="text-sm text-[#C4A88A] tabular-nums" style={serif}>
                       {(page - 1) * PAGE_SIZE + idx + 1}
                     </span>
-                    <p className="text-base text-[#2A2A2A] pr-4" style={serif}>
+                    <p className="text-base text-[#1A1A1A] pr-4" style={serif}>
                       {guest.name}
                     </p>
                     <span
@@ -250,7 +250,7 @@ export default function DashboardPage() {
 
           {/* Pagination */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-t border-[#C4A88A]/20">
-            <p className="text-xs tracking-[0.1em] text-[#8B7468] tabular-nums" style={serif}>
+            <p className="text-xs tracking-[0.1em] text-[#6B4F43] tabular-nums" style={serif}>
               {filtered.length === 0
                 ? 'No results'
                 : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
@@ -259,19 +259,19 @@ export default function DashboardPage() {
               <button
                 onClick={() => setPage(p => p - 1)}
                 disabled={page === 1}
-                className="px-3 sm:px-4 py-1.5 text-xs tracking-[0.15em] uppercase border border-[#C4A88A]/50 text-[#8B7468] hover:border-[#6B4F43] hover:text-[#6B4F43] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 sm:px-4 py-1.5 text-xs tracking-[0.15em] uppercase border border-[#C4A88A]/50 text-[#6B4F43] hover:border-[#4A2E24] hover:text-[#4A2E24] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 style={serif}
               >
                 <span className="hidden sm:inline">Previous</span>
                 <span className="sm:hidden">←</span>
               </button>
-              <span className="text-xs text-[#8B7468] tracking-[0.1em] tabular-nums" style={serif}>
+              <span className="text-xs text-[#6B4F43] tracking-[0.1em] tabular-nums" style={serif}>
                 {page} / {totalPages}
               </span>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page === totalPages}
-                className="px-3 sm:px-4 py-1.5 text-xs tracking-[0.15em] uppercase border border-[#C4A88A]/50 text-[#8B7468] hover:border-[#6B4F43] hover:text-[#6B4F43] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 sm:px-4 py-1.5 text-xs tracking-[0.15em] uppercase border border-[#C4A88A]/50 text-[#6B4F43] hover:border-[#4A2E24] hover:text-[#4A2E24] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 style={serif}
               >
                 <span className="hidden sm:inline">Next</span>
