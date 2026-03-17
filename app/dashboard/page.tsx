@@ -130,9 +130,9 @@ export default function DashboardPage() {
 
       {/* Top nav */}
       <header className="bg-white/80 border-b border-[#C4A88A]/30 sticky top-0 z-10 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <span
-            className="text-base tracking-[0.2em] uppercase text-[#6B4F43]"
+            className="text-sm sm:text-base tracking-[0.15em] sm:tracking-[0.2em] uppercase text-[#6B4F43]"
             style={serif}
           >
             Events Dashboard
@@ -147,10 +147,10 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
 
         {/* Event heading */}
-        <div className="mb-10">
+        <div className="mb-6 sm:mb-10">
           <p
             className="text-xs tracking-[0.3em] uppercase text-[#8B7468] mb-2"
             style={serif}
@@ -158,7 +158,7 @@ export default function DashboardPage() {
             Event
           </p>
           <h1
-            className="text-5xl text-[#6B4F43] italic mb-4"
+            className="text-3xl sm:text-5xl text-[#6B4F43] italic mb-4"
             style={serif}
           >
             {event?.title}
@@ -167,7 +167,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
           {[
             { label: 'Going',     count: counts.yes,     color: 'text-[#2e7d32]' },
             { label: 'Not Going', count: counts.no,      color: 'text-[#b91c1c]' },
@@ -175,15 +175,15 @@ export default function DashboardPage() {
           ].map(({ label, count, color }) => (
             <div
               key={label}
-              className="bg-white/70 border border-[#C4A88A]/30 p-6"
+              className="bg-white/70 border border-[#C4A88A]/30 p-3 sm:p-6"
             >
               <p
-                className="text-xs tracking-[0.25em] uppercase text-[#8B7468] mb-3"
+                className="text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.25em] uppercase text-[#8B7468] mb-2 sm:mb-3"
                 style={serif}
               >
                 {label}
               </p>
-              <p className={`text-4xl font-light ${color}`} style={serif}>
+              <p className={`text-3xl sm:text-4xl font-light ${color}`} style={serif}>
                 {count}
               </p>
             </div>
@@ -194,12 +194,12 @@ export default function DashboardPage() {
         <div className="bg-white/70 border border-[#C4A88A]/30">
 
           {/* Filter tabs */}
-          <div className="flex border-b border-[#C4A88A]/30 px-6 pt-5 gap-1">
+          <div className="flex flex-wrap border-b border-[#C4A88A]/30 px-3 sm:px-6 pt-4 sm:pt-5 gap-1">
             {FILTER_TABS.map(({ label, value }) => (
               <button
                 key={value}
                 onClick={() => handleFilterChange(value)}
-                className={`px-4 py-2 text-xs tracking-[0.2em] uppercase transition-all duration-200 ${
+                className={`px-2.5 sm:px-4 py-2 text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em] uppercase transition-all duration-200 ${
                   filter === value
                     ? 'bg-[#6B4F43] text-white'
                     : 'text-[#8B7468] hover:text-[#6B4F43]'
@@ -207,7 +207,7 @@ export default function DashboardPage() {
                 style={serif}
               >
                 {label}
-                <span className={`ml-1.5 ${filter === value ? 'text-white/60' : 'text-[#C4A88A]'}`}>
+                <span className={`ml-1 sm:ml-1.5 ${filter === value ? 'text-white/60' : 'text-[#C4A88A]'}`}>
                   {tabCount(value)}
                 </span>
               </button>
@@ -215,33 +215,33 @@ export default function DashboardPage() {
           </div>
 
           {/* Search */}
-          <div className="px-6 py-4 border-b border-[#C4A88A]/20">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-[#C4A88A]/20">
             <input
               type="text"
               placeholder="Search by name…"
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
-              className="w-full bg-transparent border border-[#C4A88A]/50 px-4 py-2 text-sm text-[#3A3A3A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
+              className="w-full bg-transparent border border-[#C4A88A]/50 px-3 sm:px-4 py-2 text-sm text-[#3A3A3A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
               style={serif}
             />
           </div>
 
           {/* Column headers */}
-          <div className="flex items-center px-6 py-3 border-b border-[#C4A88A]/20 bg-[#FAF5F0]/60">
+          <div className="flex items-center px-3 sm:px-6 py-3 border-b border-[#C4A88A]/20 bg-[#FAF5F0]/60">
             <span
-              className="w-10 text-xs tracking-[0.2em] uppercase text-[#8B7468]"
+              className="w-8 sm:w-10 text-[10px] sm:text-xs tracking-[0.1em] sm:tracking-[0.2em] uppercase text-[#8B7468]"
               style={serif}
             >
               #
             </span>
             <span
-              className="flex-1 text-xs tracking-[0.2em] uppercase text-[#8B7468]"
+              className="flex-1 text-[10px] sm:text-xs tracking-[0.1em] sm:tracking-[0.2em] uppercase text-[#8B7468]"
               style={serif}
             >
               Name
             </span>
             <span
-              className="text-xs tracking-[0.2em] uppercase text-[#8B7468]"
+              className="text-[10px] sm:text-xs tracking-[0.1em] sm:tracking-[0.2em] uppercase text-[#8B7468]"
               style={serif}
             >
               RSVP
@@ -265,22 +265,22 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={guest.id}
-                    className="flex items-center px-6 py-4 hover:bg-[#FAF5F0]/60 transition-colors"
+                    className="flex items-center px-3 sm:px-6 py-3 sm:py-4 hover:bg-[#FAF5F0]/60 transition-colors"
                   >
                     <span
-                      className="w-10 text-sm text-[#C4A88A]"
+                      className="w-8 sm:w-10 text-xs sm:text-sm text-[#C4A88A]"
                       style={serif}
                     >
                       {(page - 1) * PAGE_SIZE + idx + 1}
                     </span>
                     <p
-                      className="flex-1 text-base text-[#3A3A3A]"
+                      className="flex-1 text-sm sm:text-base text-[#3A3A3A] pr-2"
                       style={serif}
                     >
                       {guest.name}
                     </p>
                     <span
-                      className={`text-xs tracking-[0.1em] uppercase px-3 py-1 ${badge.className}`}
+                      className={`text-[10px] sm:text-xs tracking-[0.05em] sm:tracking-[0.1em] uppercase px-2 sm:px-3 py-1 whitespace-nowrap ${badge.className}`}
                       style={serif}
                     >
                       {badge.label}
@@ -292,23 +292,24 @@ export default function DashboardPage() {
           )}
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-[#C4A88A]/20">
+          <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-t border-[#C4A88A]/20">
             <p
-              className="text-xs tracking-[0.1em] text-[#8B7468]"
+              className="text-xs tracking-[0.05em] sm:tracking-[0.1em] text-[#8B7468]"
               style={serif}
             >
               {filtered.length === 0
                 ? 'No results'
                 : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setPage(p => p - 1)}
                 disabled={page === 1}
-                className="px-4 py-1.5 text-xs tracking-[0.2em] uppercase border border-[#C4A88A]/50 text-[#8B7468] hover:border-[#6B4F43] hover:text-[#6B4F43] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 sm:px-4 py-1.5 text-xs tracking-[0.1em] sm:tracking-[0.2em] uppercase border border-[#C4A88A]/50 text-[#8B7468] hover:border-[#6B4F43] hover:text-[#6B4F43] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 style={serif}
               >
-                Previous
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">←</span>
               </button>
               <span
                 className="text-xs text-[#8B7468] tracking-[0.1em]"
@@ -319,10 +320,11 @@ export default function DashboardPage() {
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page === totalPages}
-                className="px-4 py-1.5 text-xs tracking-[0.2em] uppercase border border-[#C4A88A]/50 text-[#8B7468] hover:border-[#6B4F43] hover:text-[#6B4F43] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 sm:px-4 py-1.5 text-xs tracking-[0.1em] sm:tracking-[0.2em] uppercase border border-[#C4A88A]/50 text-[#8B7468] hover:border-[#6B4F43] hover:text-[#6B4F43] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 style={serif}
               >
-                Next
+                <span className="hidden sm:inline">Next</span>
+                <span className="sm:hidden">→</span>
               </button>
             </div>
           </div>
