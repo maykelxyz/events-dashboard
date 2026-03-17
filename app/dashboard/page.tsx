@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 
 type RSVPStatus = 'yes' | 'no' | 'pending';
@@ -48,31 +49,107 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const res = await fetch('/api/events');
+  // Modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [rawInput, setRawInput] = useState('');
+  const [parsedNames, setParsedNames] = useState<string[]>([]);
+  const [addingLoading, setAddingLoading] = useState(false);
+  const [addError, setAddError] = useState('');
 
-        if (res.status === 401) {
-          router.push('/');
-          return;
-        }
+  const parseNames = (input: string): string[] => {
+    return input
+      .split(/[\n,]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0)
+      .filter((s, i, arr) => arr.indexOf(s) === i); // dedupe
+  };
 
-        if (!res.ok) {
-          throw new Error('Failed to fetch');
-        }
+  const handleRawInputChange = (value: string) => {
+    setRawInput(value);
+    setParsedNames(parseNames(value));
+  };
 
-        const data: EventData = await res.json();
-        setEvent(data);
-      } catch {
-        router.push('/');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const removeName = (index: number) => {
+    const updated = parsedNames.filter((_, i) => i !== index);
+    setParsedNames(updated);
+    setRawInput(updated.join('\n'));
+  };
 
-    fetchEvent();
+  // Toast
+  const [toast, setToast] = useState('');
+
+  const showToast = (message: string) => {
+    setToast(message);
+    setTimeout(() => setToast(''), 3500);
+  };
+
+  const fetchEvent = useCallback(async () => {
+    try {
+      const res = await fetch('/api/events');
+      if (res.status === 401) { router.push('/'); return; }
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data: EventData = await res.json();
+      setEvent(data);
+    } catch {
+      router.push('/');
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
+
+  useEffect(() => { fetchEvent(); }, [fetchEvent]);
+
+  // Close modal on Escape
+  useEffect(() => {
+    if (!modalOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [modalOpen]);
+
+  const openModal = () => {
+    setRawInput('');
+    setParsedNames([]);
+    setAddError('');
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setRawInput('');
+    setParsedNames([]);
+    setAddError('');
+  };
+
+  const handleAddGuest = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (parsedNames.length === 0) return;
+
+    setAddingLoading(true);
+    setAddError('');
+
+    try {
+      const res = await fetch('/api/events/guests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: parsedNames }),
+      });
+
+      if (!res.ok) throw new Error('Failed to add guests');
+
+      const count = parsedNames.length;
+      closeModal();
+      await fetchEvent();
+      showToast(count === 1
+        ? `${parsedNames[0]} has been added to the guest list.`
+        : `${count} guests have been added to the guest list.`
+      );
+    } catch {
+      setAddError('Could not add guests. Please try again.');
+    } finally {
+      setAddingLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await fetch('/api/logout', { method: 'POST' });
@@ -94,22 +171,15 @@ export default function DashboardPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const handleFilterChange = (value: Filter) => {
-    setFilter(value);
-    setPage(1);
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
+  const handleFilterChange = (value: Filter) => { setFilter(value); setPage(1); };
+  const handleSearchChange = (value: string) => { setSearch(value); setPage(1); };
 
   const tabCount = (value: Filter) => {
     if (value === 'all') return searchFiltered.length;
     return searchFiltered.filter(g => g.rsvp_status === value).length;
   };
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F5E6E0] flex items-center justify-center">
@@ -174,25 +244,34 @@ export default function DashboardPage() {
         {/* Table card */}
         <div className="bg-white/70 border border-[#C4A88A]/30">
 
-          {/* Filter tabs — wrap on mobile so "Not Going" never clips */}
-          <div className="flex flex-wrap gap-1 border-b border-[#C4A88A]/30 px-4 sm:px-6 pt-4 sm:pt-5">
-            {FILTER_TABS.map(({ label, value }) => (
-              <button
-                key={value}
-                onClick={() => handleFilterChange(value)}
-                className={`px-3 sm:px-4 py-2 text-xs tracking-[0.15em] uppercase transition-all duration-200 ${
-                  filter === value
-                    ? 'bg-[#6B4F43] text-white'
-                    : 'text-[#6B4F43] hover:text-[#4A2E24]'
-                }`}
-                style={serif}
-              >
-                {label}
-                <span className={`ml-1.5 tabular-nums ${filter === value ? 'text-white/60' : 'text-[#C4A88A]'}`}>
-                  {tabCount(value)}
-                </span>
-              </button>
-            ))}
+          {/* Filter tabs + Add Guest */}
+          <div className="flex flex-wrap items-end gap-1 border-b border-[#C4A88A]/30 px-4 sm:px-6 pt-4 sm:pt-5">
+            <div className="flex flex-wrap gap-1 flex-1">
+              {FILTER_TABS.map(({ label, value }) => (
+                <button
+                  key={value}
+                  onClick={() => handleFilterChange(value)}
+                  className={`px-3 sm:px-4 py-2 text-xs tracking-[0.15em] uppercase transition-all duration-200 ${
+                    filter === value
+                      ? 'bg-[#6B4F43] text-white'
+                      : 'text-[#6B4F43] hover:text-[#4A2E24]'
+                  }`}
+                  style={serif}
+                >
+                  {label}
+                  <span className={`ml-1.5 tabular-nums ${filter === value ? 'text-white/60' : 'text-[#C4A88A]'}`}>
+                    {tabCount(value)}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={openModal}
+              className="px-3 sm:px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] transition-colors"
+              style={serif}
+            >
+              + Add Guest
+            </button>
           </div>
 
           {/* Search */}
@@ -207,7 +286,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Column headers — grid so columns never truncate */}
+          {/* Column headers */}
           <div className="grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2.5rem_1fr_auto] items-center px-4 sm:px-6 py-3 border-b border-[#C4A88A]/20 bg-[#FAF5F0]/60">
             <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>#</span>
             <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>Name</span>
@@ -282,6 +361,128 @@ export default function DashboardPage() {
 
         </div>
       </main>
+
+      {/* ── Add Guest Modal ───────────────────────────────────────────────── */}
+      {modalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-[#2A1810]/50 backdrop-blur-sm"
+            onClick={closeModal}
+          />
+
+          {/* Panel */}
+          <div className="relative w-full max-w-md bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#C4A88A]/30">
+              <div>
+                <p className="text-xs tracking-[0.3em] uppercase text-[#6B4F43] mb-1" style={serif}>
+                  Guest List
+                </p>
+                <h2 className="text-2xl text-[#4A2E24] italic" style={serif}>
+                  Add a Guest
+                </h2>
+              </div>
+              <button
+                onClick={closeModal}
+                className="text-[#C4A88A] hover:text-[#4A2E24] transition-colors text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleAddGuest} className="px-6 py-6">
+              <label
+                htmlFor="guest-names"
+                className="block text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-1"
+                style={serif}
+              >
+                Names
+              </label>
+              <p className="text-xs text-[#8B7468] mb-2" style={serif}>
+                Separate multiple names with a comma or new line.
+              </p>
+              <textarea
+                id="guest-names"
+                autoFocus
+                rows={4}
+                placeholder={"Jane Smith\nJohn Doe, Emily Clarke"}
+                value={rawInput}
+                onChange={e => handleRawInputChange(e.target.value)}
+                className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors resize-none"
+                style={serif}
+              />
+
+              {/* Parsed name chips */}
+              {parsedNames.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {parsedNames.map((name, i) => (
+                    <span
+                      key={i}
+                      className="flex items-center gap-1.5 bg-[#EDE0D8] border border-[#C4A88A]/50 px-3 py-1 text-sm text-[#4A2E24]"
+                      style={serif}
+                    >
+                      {name}
+                      <button
+                        type="button"
+                        onClick={() => removeName(i)}
+                        className="text-[#C4A88A] hover:text-[#4A2E24] transition-colors leading-none"
+                        aria-label={`Remove ${name}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {addError && (
+                <p className="text-xs text-[#b91c1c] mt-3" style={serif}>{addError}</p>
+              )}
+
+              <div className="flex items-center gap-3 justify-end mt-5">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#8B7468] hover:text-[#4A2E24] transition-colors"
+                  style={serif}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingLoading || parsedNames.length === 0}
+                  className="px-6 py-2 text-xs tracking-[0.15em] uppercase bg-[#6B4F43] text-white hover:bg-[#4A2E24] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  style={serif}
+                >
+                  {addingLoading
+                    ? 'Adding…'
+                    : parsedNames.length > 1
+                      ? `Add ${parsedNames.length} Guests`
+                      : 'Add Guest'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Toast ────────────────────────────────────────────────────────── */}
+      {toast && createPortal(
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 bg-[#4A2E24] text-white text-sm shadow-lg flex items-center gap-3 animate-fade-in-up">
+          <span className="text-[#C4A88A]">✓</span>
+          <span style={serif}>{toast}</span>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }
