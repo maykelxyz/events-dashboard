@@ -49,12 +49,16 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  // Modal
+  // Add Guest Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [rawInput, setRawInput] = useState('');
   const [parsedNames, setParsedNames] = useState<string[]>([]);
   const [addingLoading, setAddingLoading] = useState(false);
-  const [addError, setAddError] = useState('');
+
+  // Edit / Delete mode
+  const [editMode, setEditMode] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Guest | null>(null);
+  const [deletingLoading, setDeletingLoading] = useState(false);
 
   const parseNames = (input: string): string[] => {
     return input
@@ -76,11 +80,11 @@ export default function DashboardPage() {
   };
 
   // Toast
-  const [toast, setToast] = useState('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(''), 3500);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
   const fetchEvent = useCallback(async () => {
@@ -101,16 +105,20 @@ export default function DashboardPage() {
 
   // Close modal on Escape
   useEffect(() => {
-    if (!modalOpen) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') closeModal(); };
+    if (!modalOpen && !deleteTarget) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        setDeleteTarget(null);
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [modalOpen]);
+  }, [modalOpen, deleteTarget]);
 
   const openModal = () => {
     setRawInput('');
     setParsedNames([]);
-    setAddError('');
     setModalOpen(true);
   };
 
@@ -118,7 +126,6 @@ export default function DashboardPage() {
     setModalOpen(false);
     setRawInput('');
     setParsedNames([]);
-    setAddError('');
   };
 
   const handleAddGuest = async (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -126,7 +133,6 @@ export default function DashboardPage() {
     if (parsedNames.length === 0) return;
 
     setAddingLoading(true);
-    setAddError('');
 
     try {
       const res = await fetch('/api/events/guests', {
@@ -145,9 +151,30 @@ export default function DashboardPage() {
         : `${count} guests have been added to the guest list.`
       );
     } catch {
-      setAddError('Could not add guests. Please try again.');
+      showToast('Could not add guests. Please try again.', 'error');
     } finally {
       setAddingLoading(false);
+    }
+  };
+
+  const handleDeleteGuest = async () => {
+    if (!deleteTarget) return;
+    setDeletingLoading(true);
+    try {
+      const res = await fetch(
+        `/api/events/${deleteTarget.event_id}/guests/${deleteTarget.id}`,
+        { method: 'DELETE' }
+      );
+      if (!res.ok) throw new Error('Failed to delete');
+      const name = deleteTarget.name;
+      setDeleteTarget(null);
+      await fetchEvent();
+      showToast(`${name} has been removed from the guest list.`);
+    } catch {
+      setDeleteTarget(null);
+      showToast('Could not delete guest. Please try again.', 'error');
+    } finally {
+      setDeletingLoading(false);
     }
   };
 
@@ -265,13 +292,26 @@ export default function DashboardPage() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={openModal}
-              className="px-3 sm:px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] transition-colors"
-              style={serif}
-            >
-              + Add Guest
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setEditMode(m => !m)}
+                className={`px-3 sm:px-4 py-2 text-xs tracking-[0.15em] uppercase transition-colors ${
+                  editMode
+                    ? 'text-[#b91c1c] hover:text-[#7f1d1d]'
+                    : 'text-[#6B4F43] hover:text-[#4A2E24]'
+                }`}
+                style={serif}
+              >
+                {editMode ? 'Done' : 'Edit Guests'}
+              </button>
+              <button
+                onClick={openModal}
+                className="px-3 sm:px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] transition-colors"
+                style={serif}
+              >
+                + Add Guest
+              </button>
+            </div>
           </div>
 
           {/* Search */}
@@ -287,8 +327,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2.5rem_1fr_auto] items-center px-4 sm:px-6 py-3 border-b border-[#C4A88A]/20 bg-[#FAF5F0]/60">
+          <div className={`grid ${editMode ? 'grid-cols-[2rem_2rem_1fr_auto] sm:grid-cols-[2.5rem_2rem_1fr_auto]' : 'grid-cols-[2rem_1fr_auto] sm:grid-cols-[2.5rem_1fr_auto]'} items-center px-4 sm:px-6 py-3 border-b border-[#C4A88A]/20 bg-[#FAF5F0]/60`}>
             <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>#</span>
+            {editMode && <span />}
             <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>Name</span>
             <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>RSVP</span>
           </div>
@@ -307,11 +348,21 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={guest.id}
-                    className="grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2.5rem_1fr_auto] items-center px-4 sm:px-6 py-3.5 sm:py-4 hover:bg-[#FAF5F0]/60 transition-colors"
+                    className={`grid ${editMode ? 'grid-cols-[2rem_2rem_1fr_auto] sm:grid-cols-[2.5rem_2rem_1fr_auto]' : 'grid-cols-[2rem_1fr_auto] sm:grid-cols-[2.5rem_1fr_auto]'} items-center px-4 sm:px-6 py-3.5 sm:py-4 hover:bg-[#FAF5F0]/60 transition-colors`}
                   >
                     <span className="text-sm text-[#C4A88A] tabular-nums" style={serif}>
                       {(page - 1) * PAGE_SIZE + idx + 1}
                     </span>
+                    {editMode && (
+                      <button
+                        onClick={() => setDeleteTarget(guest)}
+                        className="w-5 h-5 flex items-center justify-center rounded-full border border-[#fca5a5] text-[#b91c1c] hover:bg-[#fdf2f2] transition-colors text-sm leading-none"
+                        aria-label={`Delete ${guest.name}`}
+                        title={`Delete ${guest.name}`}
+                      >
+                        −
+                      </button>
+                    )}
                     <p className="text-base text-[#1A1A1A] pr-4" style={serif}>
                       {guest.name}
                     </p>
@@ -442,10 +493,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {addError && (
-                <p className="text-xs text-[#b91c1c] mt-3" style={serif}>{addError}</p>
-              )}
-
               <div className="flex items-center gap-3 justify-end mt-5">
                 <button
                   type="button"
@@ -474,11 +521,65 @@ export default function DashboardPage() {
         document.body
       )}
 
+      {/* ── Delete Confirmation Modal ────────────────────────────────────── */}
+      {deleteTarget && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="absolute inset-0 bg-[#2A1810]/50 backdrop-blur-sm"
+            onClick={() => !deletingLoading && setDeleteTarget(null)}
+          />
+          <div className="relative w-full max-w-sm bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
+            <div className="px-6 py-5 border-b border-[#C4A88A]/30">
+              <p className="text-xs tracking-[0.3em] uppercase text-[#6B4F43] mb-1" style={serif}>
+                Remove Guest
+              </p>
+              <h2 className="text-2xl text-[#4A2E24] italic" style={serif}>
+                Are you sure?
+              </h2>
+            </div>
+            <div className="px-6 py-6">
+              <p className="text-sm text-[#3A3A3A] mb-6" style={serif}>
+                Are you sure you want to delete{' '}
+                <span className="font-semibold text-[#4A2E24]">{deleteTarget.name}</span>{' '}
+                as a guest?
+              </p>
+              <div className="flex items-center gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deletingLoading}
+                  className="px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#8B7468] hover:text-[#4A2E24] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  style={serif}
+                >
+                  No, Keep
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteGuest}
+                  disabled={deletingLoading}
+                  className="px-6 py-2 text-xs tracking-[0.15em] uppercase bg-[#b91c1c] text-white hover:bg-[#7f1d1d] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  style={serif}
+                >
+                  {deletingLoading ? 'Deleting…' : 'Yes, Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* ── Toast ────────────────────────────────────────────────────────── */}
       {toast && createPortal(
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 bg-[#4A2E24] text-white text-sm shadow-lg flex items-center gap-3 animate-fade-in-up">
-          <span className="text-[#C4A88A]">✓</span>
-          <span style={serif}>{toast}</span>
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 text-white text-sm shadow-lg flex items-center gap-3 animate-fade-in-up ${toast.type === 'error' ? 'bg-[#7f1d1d]' : 'bg-[#4A2E24]'}`}>
+          <span className={toast.type === 'error' ? 'text-[#fca5a5]' : 'text-[#C4A88A]'}>
+            {toast.type === 'error' ? '✕' : '✓'}
+          </span>
+          <span style={serif}>{toast.message}</span>
         </div>,
         document.body
       )}
