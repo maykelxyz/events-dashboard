@@ -45,6 +45,7 @@ export default function DashboardPage() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -87,7 +88,10 @@ export default function DashboardPage() {
     pending: guests.filter(g => g.rsvp_status === 'pending').length,
   };
 
-  const filtered = filter === 'all' ? guests : guests.filter(g => g.rsvp_status === filter);
+  const searchFiltered = search.trim()
+    ? guests.filter(g => g.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : guests;
+  const filtered = filter === 'all' ? searchFiltered : searchFiltered.filter(g => g.rsvp_status === filter);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -96,8 +100,15 @@ export default function DashboardPage() {
     setPage(1);
   };
 
-  const tabCount = (value: Filter) =>
-    value === 'all' ? guests.length : counts[value];
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const tabCount = (value: Filter) => {
+    if (value === 'all') return searchFiltered.length;
+    return searchFiltered.filter(g => g.rsvp_status === value).length;
+  };
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loading) {
@@ -201,6 +212,18 @@ export default function DashboardPage() {
                 </span>
               </button>
             ))}
+          </div>
+
+          {/* Search */}
+          <div className="px-6 py-4 border-b border-[#C4A88A]/20">
+            <input
+              type="text"
+              placeholder="Search by name…"
+              value={search}
+              onChange={e => handleSearchChange(e.target.value)}
+              className="w-full bg-transparent border border-[#C4A88A]/50 px-4 py-2 text-sm text-[#3A3A3A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
+              style={serif}
+            />
           </div>
 
           {/* Column headers */}
