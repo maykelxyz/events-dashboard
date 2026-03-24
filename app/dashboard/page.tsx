@@ -508,24 +508,6 @@ export default function DashboardPage() {
           <div className="w-16 h-px bg-[#C4A88A]" />
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-8">
-          {[
-            { label: 'Going',     count: counts.yes,     color: 'text-[#2e7d32]' },
-            { label: 'Not Going', count: counts.no,      color: 'text-[#b91c1c]' },
-            { label: 'Pending',   count: counts.pending, color: 'text-[#92400e]' },
-          ].map(({ label, count, color }) => (
-            <div key={label} className="bg-white/70 border border-[#C4A88A]/30 p-4 sm:p-6">
-              <p className="text-[11px] sm:text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2 sm:mb-3" style={serif}>
-                {label}
-              </p>
-              <p className={`text-3xl sm:text-4xl font-light ${color}`} style={serif}>
-                {count}
-              </p>
-            </div>
-          ))}
-        </div>
-
         {/* Tab switcher */}
         <div className="flex border-b border-[#C4A88A]/30 mb-6">
           {(['guests', 'seating'] as Tab[]).map(tab => (
@@ -546,6 +528,23 @@ export default function DashboardPage() {
 
         {/* ── Guests Tab ───────────────────────────────────────────────────── */}
         {activeTab === 'guests' && (
+          <div>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+            {[
+              { label: 'Going',     count: counts.yes,     color: 'text-[#2e7d32]' },
+              { label: 'Not Going', count: counts.no,      color: 'text-[#b91c1c]' },
+              { label: 'Pending',   count: counts.pending, color: 'text-[#92400e]' },
+            ].map(({ label, count, color }) => (
+              <div key={label} className="bg-white/70 border border-[#C4A88A]/30 p-4 sm:p-6">
+                <p className="text-[11px] sm:text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2 sm:mb-3" style={serif}>
+                  {label}
+                </p>
+                <p className={`text-3xl sm:text-4xl font-light ${color}`} style={serif}>
+                  {count}
+                </p>
+              </div>
+            ))}
+          </div>
           <div className="bg-white/70 border border-[#C4A88A]/30">
 
             {/* Filter tabs + Add Guest */}
@@ -688,16 +687,33 @@ export default function DashboardPage() {
             </div>
 
           </div>
+          </div>
         )}
 
         {/* ── Seating Tab ──────────────────────────────────────────────────── */}
         {activeTab === 'seating' && (
           <div>
+            {/* Seating stats */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+              {[
+                { label: 'Tables',       count: tables.length,                                   color: 'text-[#4A2E24]' },
+                { label: 'Assigned',     count: goingGuests.length - unassignedGuests.length,    color: 'text-[#2e7d32]' },
+                { label: 'Unassigned', count: unassignedGuests.length,                         color: 'text-[#92400e]' },
+              ].map(({ label, count, color }) => (
+                <div key={label} className="bg-white/70 border border-[#C4A88A]/30 p-4 sm:p-6">
+                  <p className="text-[11px] sm:text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2 sm:mb-3" style={serif}>
+                    {label}
+                  </p>
+                  <p className={`text-3xl sm:text-4xl font-light ${color}`} style={serif}>
+                    {count}
+                  </p>
+                </div>
+              ))}
+            </div>
+
             {/* Seating header */}
             <div className="flex items-center justify-between mb-6">
-              <p className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>
-                {tables.length} {tables.length === 1 ? 'Table' : 'Tables'}
-              </p>
+              <div />
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => { setFindGuestQuery(''); setFindGuestOpen(true); }}
@@ -737,9 +753,10 @@ export default function DashboardPage() {
                   <div key={table.id} className="bg-white/70 border border-[#C4A88A]/30">
                     {/* Table card header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-[#C4A88A]/20">
-                      <p className="text-base text-[#4A2E24] italic" style={serif}>
-                        {table.name}
-                      </p>
+                      <div style={serif}>
+                        <p className="text-base text-[#4A2E24] italic">{table.name}</p>
+                        <p className="text-xs text-[#8B7468]">{table.seats.length} {table.seats.length === 1 ? 'pax' : 'pax'}</p>
+                      </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => { setRenameTarget(table); setRenameName(table.name); }}
