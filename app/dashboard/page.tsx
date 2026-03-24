@@ -109,6 +109,10 @@ export default function DashboardPage() {
   const [unassignTarget, setUnassignTarget] = useState<{ guestId: number; guestName: string; eventId: number } | null>(null);
   const [unassigningGuest, setUnassigningGuest] = useState(false);
 
+  // Find guest modal
+  const [findGuestOpen, setFindGuestOpen] = useState(false);
+  const [findGuestQuery, setFindGuestQuery] = useState('');
+
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -177,7 +181,7 @@ export default function DashboardPage() {
     const anyOpen =
       modalOpen || !!deleteTarget ||
       createTableOpen || !!renameTarget || !!deleteTableTarget ||
-      !!assignTarget || !!unassignTarget;
+      !!assignTarget || !!unassignTarget || findGuestOpen;
     if (!anyOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -189,6 +193,8 @@ export default function DashboardPage() {
         setAssignTarget(null);
         setAssignRows([{ guestId: '', seatLabel: '' }]);
         setUnassignTarget(null);
+        setFindGuestOpen(false);
+        setFindGuestQuery('');
       }
     };
     window.addEventListener('keydown', onKey);
@@ -646,13 +652,22 @@ export default function DashboardPage() {
               <p className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>
                 {tables.length} {tables.length === 1 ? 'Table' : 'Tables'}
               </p>
-              <button
-                onClick={() => { setNewTableName(''); setCreateTableOpen(true); }}
-                className="px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] border border-[#C4A88A]/50 hover:border-[#4A2E24] transition-colors"
-                style={serif}
-              >
-                + New Table
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setFindGuestQuery(''); setFindGuestOpen(true); }}
+                  className="px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] border border-[#C4A88A]/50 hover:border-[#4A2E24] transition-colors"
+                  style={serif}
+                >
+                  Find Guest
+                </button>
+                <button
+                  onClick={() => { setNewTableName(''); setCreateTableOpen(true); }}
+                  className="px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] border border-[#C4A88A]/50 hover:border-[#4A2E24] transition-colors"
+                  style={serif}
+                >
+                  + New Table
+                </button>
+              </div>
             </div>
 
             {seatingLoading ? (
@@ -1222,6 +1237,92 @@ export default function DashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Find Guest Modal ──────────────────────────────────────────────── */}
+      {findGuestOpen && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="absolute inset-0 bg-[#2A1810]/50 backdrop-blur-sm"
+            onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); }}
+          />
+          <div className="relative w-full max-w-md bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#C4A88A]/30">
+              <div>
+                <p className="text-xs tracking-[0.3em] uppercase text-[#6B4F43] mb-1" style={serif}>
+                  Seating
+                </p>
+                <h2 className="text-2xl text-[#4A2E24] italic" style={serif}>
+                  Find Guest
+                </h2>
+              </div>
+              <button
+                onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); }}
+                className="text-[#C4A88A] hover:text-[#4A2E24] transition-colors text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search by name…"
+                value={findGuestQuery}
+                onChange={e => setFindGuestQuery(e.target.value)}
+                className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
+                style={serif}
+              />
+
+              {/* Results */}
+              {findGuestQuery.trim() && (() => {
+                const q = findGuestQuery.trim().toLowerCase();
+                const matches = guests.filter(g => g.name.toLowerCase().includes(q));
+                if (matches.length === 0) {
+                  return (
+                    <p className="mt-4 text-sm text-[#8B7468] text-center" style={serif}>
+                      No guests found
+                    </p>
+                  );
+                }
+                return (
+                  <div className="mt-3 divide-y divide-[#C4A88A]/15 border border-[#C4A88A]/30">
+                    {matches.map(guest => {
+                      // Find their seat across all tables
+                      let seat: GuestSeatAssignment | undefined;
+                      let table: TableWithSeats | undefined;
+                      for (const t of tables) {
+                        const s = t.seats.find(s => s.guest_id === guest.id);
+                        if (s) { seat = s; table = t; break; }
+                      }
+                      return (
+                        <div key={guest.id} className="flex items-center justify-between px-4 py-3">
+                          <p className="text-sm text-[#1A1A1A]" style={serif}>{guest.name}</p>
+                          {seat && table ? (
+                            <div className="text-right">
+                              <p className="text-xs text-[#4A2E24]" style={serif}>{table.name}</p>
+                              <p className="text-xs text-[#8B7468]" style={serif}>Seat {seat.seat_label}</p>
+                            </div>
+                          ) : (
+                            <span className="text-xs tracking-[0.1em] uppercase text-[#C4A88A]" style={serif}>
+                              Unassigned
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         </div>,
         document.body
