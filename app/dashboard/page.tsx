@@ -102,8 +102,7 @@ export default function DashboardPage() {
 
   // Assign guest modal
   const [assignTarget, setAssignTarget] = useState<TableWithSeats | null>(null);
-  const [assignGuestId, setAssignGuestId] = useState<number | ''>('');
-  const [assignSeatLabel, setAssignSeatLabel] = useState('');
+  const [assignRows, setAssignRows] = useState<{ guestId: number | ''; seatLabel: string }[]>([{ guestId: '', seatLabel: '' }]);
   const [assigningGuest, setAssigningGuest] = useState(false);
 
   // Unassign guest modal
@@ -188,6 +187,7 @@ export default function DashboardPage() {
         setRenameTarget(null);
         setDeleteTableTarget(null);
         setAssignTarget(null);
+        setAssignRows([{ guestId: '', seatLabel: '' }]);
         setUnassignTarget(null);
       }
     };
@@ -326,30 +326,34 @@ export default function DashboardPage() {
 
   const handleAssignGuest = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!event || !assignTarget || assignGuestId === '' || !assignSeatLabel.trim()) return;
+    if (!event || !assignTarget) return;
+    const validRows = assignRows.filter(r => r.guestId !== '' && r.seatLabel.trim());
+    if (validRows.length === 0) return;
     setAssigningGuest(true);
     try {
       const res = await fetch(`/api/events/${event.id}/seating`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          assignments: [{
+          assignments: validRows.map(r => ({
             event_table_id: assignTarget.id,
-            guest_id: assignGuestId,
-            seat_label: assignSeatLabel.trim(),
-          }],
+            guest_id: r.guestId,
+            seat_label: r.seatLabel.trim(),
+          })),
         }),
       });
-      if (!res.ok) throw new Error('Failed to assign guest');
-      const guestName = event.guests.find(g => g.id === assignGuestId)?.name ?? 'Guest';
-      const seatLabel = assignSeatLabel.trim();
+      if (!res.ok) throw new Error('Failed to assign guests');
+      const tableName = assignTarget.name;
       setAssignTarget(null);
-      setAssignGuestId('');
-      setAssignSeatLabel('');
+      setAssignRows([{ guestId: '', seatLabel: '' }]);
       await fetchSeating(event.id);
-      showToast(`${guestName} seated at ${assignTarget.name}, seat ${seatLabel}.`);
+      showToast(
+        validRows.length === 1
+          ? `${event.guests.find(g => g.id === validRows[0].guestId)?.name ?? 'Guest'} seated at ${tableName}, seat ${validRows[0].seatLabel.trim()}.`
+          : `${validRows.length} guests seated at ${tableName}.`
+      );
     } catch {
-      showToast('Could not assign guest. Please try again.', 'error');
+      showToast('Could not assign guests. Please try again.', 'error');
     } finally {
       setAssigningGuest(false);
     }
@@ -735,10 +739,11 @@ export default function DashboardPage() {
                     {/* Assign seat button */}
                     <div className="px-5 py-3 border-t border-[#C4A88A]/20">
                       <button
-                        onClick={() => { setAssignTarget(table); setAssignGuestId(''); setAssignSeatLabel(''); }}
+                        onClick={() => { setAssignTarget(table); setAssignRows([{ guestId: '', seatLabel: '' }]); }}
                         disabled={unassignedGuests.length === 0}
                         className="text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] disabled:text-[#C4A88A] disabled:cursor-not-allowed transition-colors"
                         style={serif}
+                        onClick={() => { setAssignTarget(table); setAssignRows([{ guestId: '', seatLabel: '' }]); }}
                       >
                         + Assign Seat
                       </button>
@@ -1108,14 +1113,14 @@ export default function DashboardPage() {
             className="absolute inset-0 bg-[#2A1810]/50 backdrop-blur-sm"
             onClick={() => !assigningGuest && setAssignTarget(null)}
           />
-          <div className="relative w-full max-w-sm bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
+          <div className="relative w-full max-w-md bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
             <div className="flex items-center justify-between px-6 py-5 border-b border-[#C4A88A]/30">
               <div>
                 <p className="text-xs tracking-[0.3em] uppercase text-[#6B4F43] mb-1" style={serif}>
                   {assignTarget.name}
                 </p>
                 <h2 className="text-2xl text-[#4A2E24] italic" style={serif}>
-                  Assign Seat
+                  Assign Seats
                 </h2>
               </div>
               <button
@@ -1126,47 +1131,76 @@ export default function DashboardPage() {
                 ×
               </button>
             </div>
-            <form onSubmit={handleAssignGuest} className="px-6 py-6 space-y-4">
-              <div>
-                <label
-                  htmlFor="assign-guest"
-                  className="block text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2"
-                  style={serif}
-                >
-                  Guest
-                </label>
-                <select
-                  id="assign-guest"
-                  value={assignGuestId}
-                  onChange={e => setAssignGuestId(Number(e.target.value))}
-                  className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#6B4F43] transition-colors appearance-none"
-                  style={serif}
-                >
-                  <option value="">Select a guest…</option>
-                  {unassignedGuests.map(g => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
-                </select>
+            <form onSubmit={handleAssignGuest} className="px-6 py-6">
+              {/* Column headers */}
+              <div className="grid grid-cols-[1fr_7rem_1.5rem] gap-2 mb-2">
+                <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>Guest</span>
+                <span className="text-xs tracking-[0.2em] uppercase text-[#6B4F43]" style={serif}>Seat</span>
+                <span />
               </div>
-              <div>
-                <label
-                  htmlFor="seat-label"
-                  className="block text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2"
+
+              {/* Rows */}
+              <div className="space-y-2">
+                {assignRows.map((row, i) => {
+                  // Guests already picked in other rows
+                  const takenIds = new Set(assignRows.filter((_, j) => j !== i).map(r => r.guestId).filter(id => id !== ''));
+                  const availableGuests = unassignedGuests.filter(g => !takenIds.has(g.id));
+                  return (
+                    <div key={i} className="grid grid-cols-[1fr_7rem_1.5rem] gap-2 items-center">
+                      <select
+                        value={row.guestId}
+                        onChange={e => {
+                          const updated = [...assignRows];
+                          updated[i] = { ...updated[i], guestId: e.target.value === '' ? '' : Number(e.target.value) };
+                          setAssignRows(updated);
+                        }}
+                        className="bg-white border border-[#C4A88A]/50 px-3 py-2 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#6B4F43] transition-colors appearance-none"
+                        style={serif}
+                      >
+                        <option value="">Select…</option>
+                        {availableGuests.map(g => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="e.g. A1"
+                        value={row.seatLabel}
+                        onChange={e => {
+                          const updated = [...assignRows];
+                          updated[i] = { ...updated[i], seatLabel: e.target.value };
+                          setAssignRows(updated);
+                        }}
+                        className="bg-white border border-[#C4A88A]/50 px-3 py-2 text-sm text-[#1A1A1A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
+                        style={serif}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setAssignRows(rows => rows.length === 1 ? rows : rows.filter((_, j) => j !== i))}
+                        disabled={assignRows.length === 1}
+                        className="w-5 h-5 flex items-center justify-center rounded-full border border-[#C4A88A]/50 text-[#C4A88A] hover:border-[#b91c1c] hover:text-[#b91c1c] disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm leading-none"
+                        aria-label="Remove row"
+                      >
+                        −
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add row */}
+              {unassignedGuests.length > assignRows.length && (
+                <button
+                  type="button"
+                  onClick={() => setAssignRows(rows => [...rows, { guestId: '', seatLabel: '' }])}
+                  className="mt-3 text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] transition-colors"
                   style={serif}
                 >
-                  Seat Label
-                </label>
-                <input
-                  id="seat-label"
-                  type="text"
-                  placeholder="e.g. 1, A2, Window…"
-                  value={assignSeatLabel}
-                  onChange={e => setAssignSeatLabel(e.target.value)}
-                  className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
-                  style={serif}
-                />
-              </div>
-              <div className="flex items-center gap-3 justify-end pt-1">
+                  + Add Another
+                </button>
+              )}
+
+              <div className="flex items-center gap-3 justify-end mt-5">
                 <button
                   type="button"
                   onClick={() => setAssignTarget(null)}
@@ -1177,11 +1211,14 @@ export default function DashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={assigningGuest || assignGuestId === '' || !assignSeatLabel.trim()}
+                  disabled={assigningGuest || !assignRows.some(r => r.guestId !== '' && r.seatLabel.trim())}
                   className="px-6 py-2 text-xs tracking-[0.15em] uppercase bg-[#6B4F43] text-white hover:bg-[#4A2E24] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   style={serif}
                 >
-                  {assigningGuest ? 'Assigning…' : 'Assign'}
+                  {assigningGuest
+                    ? 'Assigning…'
+                    : (() => { const n = assignRows.filter(r => r.guestId !== '' && r.seatLabel.trim()).length; return n > 1 ? `Assign ${n} Guests` : 'Assign'; })()
+                  }
                 </button>
               </div>
             </form>
