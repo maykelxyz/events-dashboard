@@ -803,7 +803,6 @@ export default function DashboardPage() {
                         disabled={unassignedGuests.length === 0}
                         className="text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] disabled:text-[#C4A88A] disabled:cursor-not-allowed transition-colors"
                         style={serif}
-                        onClick={() => { setAssignTarget(table); setAssignRows([{ guestId: '', seatLabel: '' }]); }}
                       >
                         + Assign Seat
                       </button>
