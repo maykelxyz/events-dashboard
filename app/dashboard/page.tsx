@@ -1379,15 +1379,11 @@ export default function DashboardPage() {
                           <div key={guest.id} className="flex items-center justify-between px-4 py-3 gap-4">
                             <p className="text-sm text-[#3A3A3A] flex-1 min-w-0 truncate" style={serif}>{guest.name}</p>
                             <div className="flex items-center gap-3 shrink-0">
-                              {seat && table ? (
+                              {seat && table && (
                                 <div className="text-right">
                                   <p className="text-xs text-[#4A2E24]" style={serif}>{table.name}</p>
                                   <p className="text-xs text-[#8B7468]" style={serif}>Seat {seat.seat_label}</p>
                                 </div>
-                              ) : (
-                                <span className="text-xs tracking-[0.1em] uppercase text-[#C4A88A]" style={serif}>
-                                  Unassigned
-                                </span>
                               )}
                               {isUnassigned && tables.length > 0 && (
                                 <button
