@@ -113,6 +113,13 @@ export default function DashboardPage() {
   const [findGuestOpen, setFindGuestOpen] = useState(false);
   const [findGuestQuery, setFindGuestQuery] = useState('');
   const [findGuestPage, setFindGuestPage] = useState(1);
+  const [findGuestFilter, setFindGuestFilter] = useState<'all' | 'unassigned'>('all');
+
+  // Quick-assign modal (from Find Guest)
+  const [quickAssignGuest, setQuickAssignGuest] = useState<Guest | null>(null);
+  const [quickAssignTableId, setQuickAssignTableId] = useState<number | ''>('');
+  const [quickAssignSeatLabel, setQuickAssignSeatLabel] = useState('');
+  const [quickAssigning, setQuickAssigning] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -182,7 +189,7 @@ export default function DashboardPage() {
     const anyOpen =
       modalOpen || !!deleteTarget ||
       createTableOpen || !!renameTarget || !!deleteTableTarget ||
-      !!assignTarget || !!unassignTarget || findGuestOpen;
+      !!assignTarget || !!unassignTarget || findGuestOpen || !!quickAssignGuest;
     if (!anyOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -197,6 +204,10 @@ export default function DashboardPage() {
         setFindGuestOpen(false);
         setFindGuestQuery('');
         setFindGuestPage(1);
+        setFindGuestFilter('all');
+        setQuickAssignGuest(null);
+        setQuickAssignTableId('');
+        setQuickAssignSeatLabel('');
       }
     };
     window.addEventListener('keydown', onKey);
@@ -385,6 +396,38 @@ export default function DashboardPage() {
       showToast('Could not unassign guest. Please try again.', 'error');
     } finally {
       setUnassigningGuest(false);
+    }
+  };
+
+  const handleQuickAssign = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!event || !quickAssignGuest || quickAssignTableId === '' || !quickAssignSeatLabel.trim()) return;
+    setQuickAssigning(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/seating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignments: [{
+            event_table_id: quickAssignTableId,
+            guest_id: quickAssignGuest.id,
+            seat_label: quickAssignSeatLabel.trim(),
+          }],
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to assign');
+      const tableName = tables.find(t => t.id === quickAssignTableId)?.name ?? 'table';
+      const seatLabel = quickAssignSeatLabel.trim();
+      const guestName = quickAssignGuest.name;
+      setQuickAssignGuest(null);
+      setQuickAssignTableId('');
+      setQuickAssignSeatLabel('');
+      await fetchSeating(event.id);
+      showToast(`${guestName} seated at ${tableName}, seat ${seatLabel}.`);
+    } catch {
+      showToast('Could not assign guest. Please try again.', 'error');
+    } finally {
+      setQuickAssigning(false);
     }
   };
 
@@ -1188,7 +1231,7 @@ export default function DashboardPage() {
                           updated[i] = { ...updated[i], seatLabel: e.target.value };
                           setAssignRows(updated);
                         }}
-                        className="bg-white border border-[#C4A88A]/50 px-3 py-2 text-sm text-[#1A1A1A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
+                        className="bg-white border border-[#C4A88A]/50 px-3 py-2 text-sm text-[#3A3A3A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors caret-[#4A2E24]"
                         style={serif}
                       />
                       <button
@@ -1253,9 +1296,10 @@ export default function DashboardPage() {
         >
           <div
             className="absolute inset-0 bg-[#2A1810]/50 backdrop-blur-sm"
-            onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); setFindGuestPage(1); }}
+            onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); setFindGuestPage(1); setFindGuestFilter('all'); }}
           />
           <div className="relative w-full max-w-md bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
+            {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-[#C4A88A]/30">
               <div>
                 <p className="text-xs tracking-[0.3em] uppercase text-[#6B4F43] mb-1" style={serif}>
@@ -1266,13 +1310,32 @@ export default function DashboardPage() {
                 </h2>
               </div>
               <button
-                onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); setFindGuestPage(1); }}
+                onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); setFindGuestPage(1); setFindGuestFilter('all'); }}
                 className="text-[#C4A88A] hover:text-[#4A2E24] transition-colors text-xl leading-none"
                 aria-label="Close"
               >
                 ×
               </button>
             </div>
+
+            {/* All / Unassigned tabs */}
+            <div className="flex border-b border-[#C4A88A]/30">
+              {(['all', 'unassigned'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => { setFindGuestFilter(f); setFindGuestPage(1); }}
+                  className={`px-5 py-2.5 text-xs tracking-[0.2em] uppercase transition-all duration-200 border-b-2 -mb-px ${
+                    findGuestFilter === f
+                      ? 'border-[#6B4F43] text-[#4A2E24]'
+                      : 'border-transparent text-[#8B7468] hover:text-[#6B4F43]'
+                  }`}
+                  style={serif}
+                >
+                  {f === 'all' ? `All (${guests.length})` : `Unassigned (${unassignedGuests.length})`}
+                </button>
+              ))}
+            </div>
+
             <div className="px-6 py-5">
               <input
                 autoFocus
@@ -1280,15 +1343,17 @@ export default function DashboardPage() {
                 placeholder="Search by name…"
                 value={findGuestQuery}
                 onChange={e => { setFindGuestQuery(e.target.value); setFindGuestPage(1); }}
-                className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
+                className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#3A3A3A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors caret-[#4A2E24]"
                 style={serif}
               />
 
               {/* Results */}
-              {findGuestQuery.trim() && (() => {
+              {(() => {
                 const FIND_PAGE_SIZE = 8;
                 const q = findGuestQuery.trim().toLowerCase();
-                const matches = guests.filter(g => g.name.toLowerCase().includes(q));
+                const pool = findGuestFilter === 'unassigned' ? unassignedGuests : guests;
+                const matches = q ? pool.filter(g => g.name.toLowerCase().includes(q)) : pool;
+
                 if (matches.length === 0) {
                   return (
                     <p className="mt-4 text-sm text-[#8B7468] text-center" style={serif}>
@@ -1296,8 +1361,10 @@ export default function DashboardPage() {
                     </p>
                   );
                 }
+
                 const totalFindPages = Math.ceil(matches.length / FIND_PAGE_SIZE);
                 const paginated = matches.slice((findGuestPage - 1) * FIND_PAGE_SIZE, findGuestPage * FIND_PAGE_SIZE);
+
                 return (
                   <>
                     <div className="mt-3 divide-y divide-[#C4A88A]/15 border border-[#C4A88A]/30">
@@ -1308,19 +1375,36 @@ export default function DashboardPage() {
                           const s = t.seats.find(s => s.guest_id === guest.id);
                           if (s) { seat = s; table = t; break; }
                         }
+                        const isUnassigned = !seat;
                         return (
-                          <div key={guest.id} className="flex items-center justify-between px-4 py-3">
-                            <p className="text-sm text-[#1A1A1A]" style={serif}>{guest.name}</p>
-                            {seat && table ? (
-                              <div className="text-right">
-                                <p className="text-xs text-[#4A2E24]" style={serif}>{table.name}</p>
-                                <p className="text-xs text-[#8B7468]" style={serif}>Seat {seat.seat_label}</p>
-                              </div>
-                            ) : (
-                              <span className="text-xs tracking-[0.1em] uppercase text-[#C4A88A]" style={serif}>
-                                Unassigned
-                              </span>
-                            )}
+                          <div key={guest.id} className="flex items-center justify-between px-4 py-3 gap-4">
+                            <p className="text-sm text-[#3A3A3A] flex-1 min-w-0 truncate" style={serif}>{guest.name}</p>
+                            <div className="flex items-center gap-3 shrink-0">
+                              {seat && table ? (
+                                <div className="text-right">
+                                  <p className="text-xs text-[#4A2E24]" style={serif}>{table.name}</p>
+                                  <p className="text-xs text-[#8B7468]" style={serif}>Seat {seat.seat_label}</p>
+                                </div>
+                              ) : (
+                                <span className="text-xs tracking-[0.1em] uppercase text-[#C4A88A]" style={serif}>
+                                  Unassigned
+                                </span>
+                              )}
+                              {isUnassigned && tables.length > 0 && (
+                                <button
+                                  onClick={() => {
+                                    setFindGuestOpen(false);
+                                    setQuickAssignGuest(guest);
+                                    setQuickAssignTableId('');
+                                    setQuickAssignSeatLabel('');
+                                  }}
+                                  className="text-xs tracking-[0.15em] uppercase text-[#6B4F43] hover:text-[#4A2E24] border border-[#C4A88A]/50 hover:border-[#4A2E24] px-2.5 py-1 transition-colors whitespace-nowrap"
+                                  style={serif}
+                                >
+                                  Assign
+                                </button>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
@@ -1359,6 +1443,100 @@ export default function DashboardPage() {
                 );
               })()}
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Quick Assign Modal (from Find Guest) ─────────────────────────── */}
+      {quickAssignGuest && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="absolute inset-0 bg-[#2A1810]/50 backdrop-blur-sm"
+            onClick={() => !quickAssigning && setQuickAssignGuest(null)}
+          />
+          <div className="relative w-full max-w-sm bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#C4A88A]/30">
+              <div>
+                <p className="text-xs tracking-[0.3em] uppercase text-[#6B4F43] mb-1" style={serif}>
+                  {quickAssignGuest.name}
+                </p>
+                <h2 className="text-2xl text-[#4A2E24] italic" style={serif}>
+                  Assign Seat
+                </h2>
+              </div>
+              <button
+                onClick={() => setQuickAssignGuest(null)}
+                className="text-[#C4A88A] hover:text-[#4A2E24] transition-colors text-xl leading-none"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <form onSubmit={handleQuickAssign} className="px-6 py-6 space-y-4">
+              <div>
+                <label
+                  htmlFor="quick-assign-table"
+                  className="block text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2"
+                  style={serif}
+                >
+                  Table
+                </label>
+                <select
+                  id="quick-assign-table"
+                  autoFocus
+                  value={quickAssignTableId}
+                  onChange={e => setQuickAssignTableId(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#3A3A3A] focus:outline-none focus:border-[#6B4F43] transition-colors appearance-none"
+                  style={serif}
+                >
+                  <option value="">Select a table…</option>
+                  {tables.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="quick-assign-seat"
+                  className="block text-xs tracking-[0.2em] uppercase text-[#6B4F43] mb-2"
+                  style={serif}
+                >
+                  Seat Label
+                </label>
+                <input
+                  id="quick-assign-seat"
+                  type="text"
+                  placeholder="e.g. 1, A2, Window…"
+                  value={quickAssignSeatLabel}
+                  onChange={e => setQuickAssignSeatLabel(e.target.value)}
+                  className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#3A3A3A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors caret-[#4A2E24]"
+                  style={serif}
+                />
+              </div>
+              <div className="flex items-center gap-3 justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={() => setQuickAssignGuest(null)}
+                  className="px-4 py-2 text-xs tracking-[0.15em] uppercase text-[#8B7468] hover:text-[#4A2E24] transition-colors"
+                  style={serif}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={quickAssigning || quickAssignTableId === '' || !quickAssignSeatLabel.trim()}
+                  className="px-6 py-2 text-xs tracking-[0.15em] uppercase bg-[#6B4F43] text-white hover:bg-[#4A2E24] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  style={serif}
+                >
+                  {quickAssigning ? 'Assigning…' : 'Assign'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>,
         document.body
