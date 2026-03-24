@@ -112,6 +112,7 @@ export default function DashboardPage() {
   // Find guest modal
   const [findGuestOpen, setFindGuestOpen] = useState(false);
   const [findGuestQuery, setFindGuestQuery] = useState('');
+  const [findGuestPage, setFindGuestPage] = useState(1);
 
   // Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -195,6 +196,7 @@ export default function DashboardPage() {
         setUnassignTarget(null);
         setFindGuestOpen(false);
         setFindGuestQuery('');
+        setFindGuestPage(1);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -1251,7 +1253,7 @@ export default function DashboardPage() {
         >
           <div
             className="absolute inset-0 bg-[#2A1810]/50 backdrop-blur-sm"
-            onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); }}
+            onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); setFindGuestPage(1); }}
           />
           <div className="relative w-full max-w-md bg-[#FAF5F0] border border-[#C4A88A]/50 shadow-xl">
             <div className="flex items-center justify-between px-6 py-5 border-b border-[#C4A88A]/30">
@@ -1264,7 +1266,7 @@ export default function DashboardPage() {
                 </h2>
               </div>
               <button
-                onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); }}
+                onClick={() => { setFindGuestOpen(false); setFindGuestQuery(''); setFindGuestPage(1); }}
                 className="text-[#C4A88A] hover:text-[#4A2E24] transition-colors text-xl leading-none"
                 aria-label="Close"
               >
@@ -1277,13 +1279,14 @@ export default function DashboardPage() {
                 type="text"
                 placeholder="Search by name…"
                 value={findGuestQuery}
-                onChange={e => setFindGuestQuery(e.target.value)}
+                onChange={e => { setFindGuestQuery(e.target.value); setFindGuestPage(1); }}
                 className="w-full bg-white border border-[#C4A88A]/50 px-4 py-2.5 text-sm text-[#1A1A1A] placeholder-[#C4A88A] focus:outline-none focus:border-[#6B4F43] transition-colors"
                 style={serif}
               />
 
               {/* Results */}
               {findGuestQuery.trim() && (() => {
+                const FIND_PAGE_SIZE = 8;
                 const q = findGuestQuery.trim().toLowerCase();
                 const matches = guests.filter(g => g.name.toLowerCase().includes(q));
                 if (matches.length === 0) {
@@ -1293,33 +1296,66 @@ export default function DashboardPage() {
                     </p>
                   );
                 }
+                const totalFindPages = Math.ceil(matches.length / FIND_PAGE_SIZE);
+                const paginated = matches.slice((findGuestPage - 1) * FIND_PAGE_SIZE, findGuestPage * FIND_PAGE_SIZE);
                 return (
-                  <div className="mt-3 divide-y divide-[#C4A88A]/15 border border-[#C4A88A]/30">
-                    {matches.map(guest => {
-                      // Find their seat across all tables
-                      let seat: GuestSeatAssignment | undefined;
-                      let table: TableWithSeats | undefined;
-                      for (const t of tables) {
-                        const s = t.seats.find(s => s.guest_id === guest.id);
-                        if (s) { seat = s; table = t; break; }
-                      }
-                      return (
-                        <div key={guest.id} className="flex items-center justify-between px-4 py-3">
-                          <p className="text-sm text-[#1A1A1A]" style={serif}>{guest.name}</p>
-                          {seat && table ? (
-                            <div className="text-right">
-                              <p className="text-xs text-[#4A2E24]" style={serif}>{table.name}</p>
-                              <p className="text-xs text-[#8B7468]" style={serif}>Seat {seat.seat_label}</p>
-                            </div>
-                          ) : (
-                            <span className="text-xs tracking-[0.1em] uppercase text-[#C4A88A]" style={serif}>
-                              Unassigned
-                            </span>
-                          )}
+                  <>
+                    <div className="mt-3 divide-y divide-[#C4A88A]/15 border border-[#C4A88A]/30">
+                      {paginated.map(guest => {
+                        let seat: GuestSeatAssignment | undefined;
+                        let table: TableWithSeats | undefined;
+                        for (const t of tables) {
+                          const s = t.seats.find(s => s.guest_id === guest.id);
+                          if (s) { seat = s; table = t; break; }
+                        }
+                        return (
+                          <div key={guest.id} className="flex items-center justify-between px-4 py-3">
+                            <p className="text-sm text-[#1A1A1A]" style={serif}>{guest.name}</p>
+                            {seat && table ? (
+                              <div className="text-right">
+                                <p className="text-xs text-[#4A2E24]" style={serif}>{table.name}</p>
+                                <p className="text-xs text-[#8B7468]" style={serif}>Seat {seat.seat_label}</p>
+                              </div>
+                            ) : (
+                              <span className="text-xs tracking-[0.1em] uppercase text-[#C4A88A]" style={serif}>
+                                Unassigned
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {totalFindPages > 1 && (
+                      <div className="flex items-center justify-between mt-3">
+                        <p className="text-xs text-[#8B7468] tabular-nums" style={serif}>
+                          {(findGuestPage - 1) * FIND_PAGE_SIZE + 1}–{Math.min(findGuestPage * FIND_PAGE_SIZE, matches.length)} of {matches.length}
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setFindGuestPage(p => p - 1)}
+                            disabled={findGuestPage === 1}
+                            className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase border border-[#C4A88A]/50 text-[#6B4F43] hover:border-[#4A2E24] hover:text-[#4A2E24] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            style={serif}
+                          >
+                            ←
+                          </button>
+                          <span className="text-xs text-[#6B4F43] tabular-nums" style={serif}>
+                            {findGuestPage} / {totalFindPages}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setFindGuestPage(p => p + 1)}
+                            disabled={findGuestPage === totalFindPages}
+                            className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase border border-[#C4A88A]/50 text-[#6B4F43] hover:border-[#4A2E24] hover:text-[#4A2E24] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            style={serif}
+                          >
+                            →
+                          </button>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    )}
+                  </>
                 );
               })()}
             </div>
