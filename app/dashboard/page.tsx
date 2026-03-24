@@ -459,9 +459,10 @@ export default function DashboardPage() {
     return searchFiltered.filter(g => g.rsvp_status === value).length;
   };
 
-  // Guests not yet assigned to any seat
+  // Guests not yet assigned to any seat (only those going)
   const assignedGuestIds = new Set(tables.flatMap(t => t.seats.map(s => s.guest_id)));
-  const unassignedGuests = guests.filter(g => !assignedGuestIds.has(g.id));
+  const goingGuests = guests.filter(g => g.rsvp_status === 'yes');
+  const unassignedGuests = goingGuests.filter(g => !assignedGuestIds.has(g.id));
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -1330,7 +1331,7 @@ export default function DashboardPage() {
                   }`}
                   style={serif}
                 >
-                  {f === 'all' ? `All (${guests.length})` : `Unassigned (${unassignedGuests.length})`}
+                  {f === 'all' ? `All (${goingGuests.length})` : `Unassigned (${unassignedGuests.length})`}
                 </button>
               ))}
             </div>
@@ -1350,7 +1351,7 @@ export default function DashboardPage() {
               {(() => {
                 const FIND_PAGE_SIZE = 8;
                 const q = findGuestQuery.trim().toLowerCase();
-                const pool = findGuestFilter === 'unassigned' ? unassignedGuests : guests;
+                const pool = findGuestFilter === 'unassigned' ? unassignedGuests : goingGuests;
                 const matches = q ? pool.filter(g => g.name.toLowerCase().includes(q)) : pool;
 
                 if (matches.length === 0) {
