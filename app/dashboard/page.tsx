@@ -464,6 +464,39 @@ export default function DashboardPage() {
   const goingGuests = guests.filter(g => g.rsvp_status === 'yes');
   const unassignedGuests = goingGuests.filter(g => !assignedGuestIds.has(g.id));
 
+  const handleExportSeatsCSV = () => {
+    const rows: string[] = [];
+
+    for (const table of tables) {
+      rows.push(table.name);
+      rows.push('Name,Seat Number');
+      for (const seat of table.seats) {
+        const guest = guests.find(g => g.id === seat.guest_id);
+        const name = (guest?.name ?? `Guest #${seat.guest_id}`).replace(/"/g, '""');
+        const label = seat.seat_label.replace(/"/g, '""');
+        rows.push(`"${name}","${label}"`);
+      }
+      rows.push('');
+    }
+
+    if (unassignedGuests.length > 0) {
+      rows.push('Unassigned');
+      rows.push('Name');
+      for (const g of unassignedGuests) {
+        rows.push(`"${g.name.replace(/"/g, '""')}"`);
+      }
+    }
+
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${event?.title ?? 'seating'}-seats.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -728,6 +761,19 @@ export default function DashboardPage() {
                   style={serif}
                 >
                   + New Table
+                </button>
+                <button
+                  onClick={handleExportSeatsCSV}
+                  disabled={tables.length === 0}
+                  title="Export seats as CSV"
+                  className="w-8 h-8 flex items-center justify-center border border-[#C4A88A]/50 text-[#6B4F43] hover:text-[#4A2E24] hover:border-[#4A2E24] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  style={serif}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
                 </button>
               </div>
             </div>
